@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.idea/
+
+*.tsbuildinfo
+.wrangler/
+.env
+.env.*
+!.env.example

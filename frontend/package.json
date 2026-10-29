@@ -1,0 +1,26 @@
+{
+  "name": "wayflow-order",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "hono": "^4.12.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "vite": "8.3.5"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.19.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "tsx": "^4.20.0",
+    "typescript": "5.8.3"
+  }
+}
