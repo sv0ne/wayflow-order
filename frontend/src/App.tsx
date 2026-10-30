@@ -174,7 +174,7 @@ function App() {
   if (error && !order) return <main className="page-shell"><div className="error-state"><img className="brand" src="/assets/workingdrops-logo.svg" alt="Workingdrops"/><h1>We couldn’t load this order</h1><p>{error}</p><button className="button button-primary" onClick={() => window.location.reload()}>Try again</button></div></main>;
   if (!order || !stats) return null;
 
-  return <main className="page-shell">
+  return <main className="page-shell v3">
     <img className="brand" src="/assets/workingdrops-logo.svg" alt="Workingdrops" />
     <header className="order-header">
       <div className="order-id">#{order.id}</div>

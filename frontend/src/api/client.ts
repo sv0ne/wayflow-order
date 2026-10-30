@@ -9,5 +9,5 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const body = await response.json().catch(() => null);
     throw new Error(body?.error ?? `Request failed (${response.status})`);
   }
-  return response.json() as Promise<T>;
+  return await response.json() as Promise<T>;
 }
