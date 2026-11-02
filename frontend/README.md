@@ -105,6 +105,8 @@ window.APP_CONFIG = {
   API_BASE_URL: 'http://site-api.me' // Адрес API
 };
 ```
+> **Важно для SPA-роутинга:**
+> Так как это Single Page Application (React), все входящие запросы должны перенаправляться на главный файл index.html.
 
 ### Для frontend-команды
 
