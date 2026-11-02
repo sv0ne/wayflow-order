@@ -122,7 +122,7 @@ export function FilterDialog({ kind, initialValues, initialSites, initialSitesNe
     content = <>
       <div className="modal-list ad-list">
         {adTypes.map((group) => {
-          return <div className="ad-group" key={group.category || 'standard'}>{group.category && <h3>{group.category}</h3>}{group.options.map((option) => <OptionRow key={option.id} label={option.name} checked={selected.includes(option.id)} onChange={() => toggle(option.id)}/>)}</div>;
+          return <div className="modal-group" key={group.category || 'standard'}>{group.category && <h3>{group.category}</h3>}{group.options.map((option) => <OptionRow key={option.id} label={option.name} checked={selected.includes(option.id)} onChange={() => toggle(option.id)}/>)}</div>;
         })}
       </div>
     </>;
