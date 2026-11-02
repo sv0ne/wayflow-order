@@ -65,7 +65,8 @@ app.post('/api/metrics', async (context) => {
     (selectedThemeSet.size === 0 || selectedThemeSet.has(item.theme))
   ).slice(0, 5);
   const factor = Math.max(0.42, 1 - selectedSites.length * 0.035 - selectedCountries.length * 0.025 - selectedThemes.length * 0.02 + selectedAds.length * 0.015);
-  const hasConflict = selectedAds.includes('flat-position-4-6') || selectedAds.includes('banner-fixed-bottom');
+  const hasConflict = selectedAds.includes('flat-position-4-6');
+  const needsAdsTypeChoice = hasConflict && !['asc', 'desc', 'match'].includes(String(payload.adsTypeChoice));
   const replacement = payload.adsTypeChoice === 'desc' ? 'Position 2-3' : payload.adsTypeChoice === 'asc' ? 'Position 7-10' : null;
   const alternatives = hasConflict && replacement ? sites.slice(20, 25).map((_, index) => ({
     id: `alternative-${index + 1}`,
@@ -76,6 +77,7 @@ app.post('/api/metrics', async (context) => {
   })) : [];
 
   return context.json({
+    needsAdsTypeChoice,
     stats: { tds: Math.round(145100 * factor), gsc: Math.round(125200 * factor), price: Math.round(15000 * factor) },
     topPicks: filteredTopPicks.map((item) => ({ ...item, clicks: Math.round(item.clicks * factor) })),
     alternatives,

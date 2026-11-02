@@ -15,23 +15,23 @@ export const themes = ['Big Bass Splash', 'Aviator', 'Pin-UP', 'Book of Dead', '
 
 export const adTypes = [
   { category: '', options: [
-    { id: 'standard-position-7-10', name: 'Position 7-10', occupied: false },
-    { id: 'standard-fixed-bottom', name: 'Fixed bottom panel', occupied: false },
+    { id: 'standard-position-7-10', name: 'Position 7-10' },
+    { id: 'standard-fixed-bottom', name: 'Fixed bottom panel' },
   ] },
   { category: 'Flat Fee', options: [
-    { id: 'flat-position-1', name: 'Position 1', occupied: false },
-    { id: 'flat-position-2-3', name: 'Position 2-3', occupied: false },
-    { id: 'flat-position-4-6', name: 'Position 4-6', occupied: true },
-    { id: 'flat-position-7-10', name: 'Position 7-10', occupied: false },
-    { id: 'flat-position-11-20', name: 'Position 11-20', occupied: false },
+    { id: 'flat-position-1', name: 'Position 1' },
+    { id: 'flat-position-2-3', name: 'Position 2-3' },
+    { id: 'flat-position-4-6', name: 'Position 4-6' },
+    { id: 'flat-position-7-10', name: 'Position 7-10' },
+    { id: 'flat-position-11-20', name: 'Position 11-20' },
   ] },
   { category: 'Listing', options: [
-    { id: 'listing-30', name: 'New site 30', occupied: false },
-    { id: 'listing-365', name: 'New site 365', occupied: false }
+    { id: 'listing-30', name: 'New site 30' },
+    { id: 'listing-365', name: 'New site 365' }
   ] },
   { category: 'Banners', options: [
-    { id: 'banner-fixed-bottom', name: 'Fixed bottom panel', occupied: true },
-    { id: 'banner-play-money', name: 'Play for money buttons', occupied: false }
+    { id: 'banner-fixed-bottom', name: 'Fixed bottom panel' },
+    { id: 'banner-play-money', name: 'Play for money buttons' }
   ] },
 ];
 

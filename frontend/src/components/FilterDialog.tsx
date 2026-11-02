@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 
 export type FilterKind = 'sites' | 'countries' | 'themes' | 'adsType';
-type AdGroup = { category: string; options: { id: string; name: string; occupied: boolean }[] };
+type AdGroup = { category: string; options: { id: string; name: string }[] };
 type Props = {
   kind: FilterKind;
   initialValues: string[];

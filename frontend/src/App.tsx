@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api/client';
 import { FilterDialog, type FilterKind } from './components/FilterDialog';
 import { Countdown } from './components/Countdown/Countdown.tsx';
@@ -6,7 +6,7 @@ import deleteIcon from './assets/icons/delete.svg';
 import {Notice} from "./components/Notice/Notice.tsx";
 import helpIcon from "./assets/icons/help-icon.svg";
 
-type AdOption = { id: string; name: string; occupied: boolean };
+type AdOption = { id: string; name: string };
 type AdGroup = { category: string; options: AdOption[] };
 type Order = {
   id: string;
@@ -18,7 +18,7 @@ type Order = {
 type Stats = Order['stats'];
 type Pick = { domain: string; theme: string; clicks: number };
 type Alternative = { id: string; site: number; country: string | null; theme: string | null; adType: string };
-type MetricsResponse = { stats: Stats; topPicks: Pick[]; alternatives: Alternative[] };
+type MetricsResponse = { stats: Stats; topPicks: Pick[]; alternatives: Alternative[]; needsAdsTypeChoice?: boolean };
 type MetricFilters = { sites: string[]; countries: string[]; themes: string[]; adTypes: string[] };
 type AdsChoice = 'asc' | 'desc' | 'match';
 
@@ -100,12 +100,6 @@ function App() {
     return () => { cancelled = true; };
   }, [orderId]);
 
-  const hasOccupiedSelection = useMemo(() => {
-    if (!order) return false;
-    const selected = new Set(filters.adTypes);
-    return order.filters.adTypes.some((group) => group.options.some((option) => selected.has(option.id) && option.occupied));
-  }, [filters.adTypes, order]);
-
   const updateMetrics = useCallback(async (next: MetricFilters, adsTypeChoice?: AdsChoice | null) => {
     const requestId = ++requestCounter.current;
     setUpdating(true);
@@ -113,6 +107,13 @@ function App() {
     try {
       const result = await api<MetricsResponse>('/api/metrics', { method: 'POST', body: JSON.stringify({ ...next, orderId, adsTypeChoice: adsTypeChoice ?? settings }) });
       if (requestId !== requestCounter.current) return;
+      if (result.needsAdsTypeChoice) {
+        setSettingsForced(true);
+        setDraftChoice(null);
+        setAlternatives([]);
+        return;
+      }
+      setSettingsForced(false);
       setStats(result.stats);
       setTopPicks(result.topPicks);
       setAlternatives(result.alternatives ?? []);
@@ -132,17 +133,7 @@ function App() {
     }
     setFilters(next);
     setActiveDialog(null);
-    const selectedOccupied = kind === 'adsType' && order?.filters.adTypes.some((group) => group.options.some((option) => option.occupied && values.includes(option.id)));
-
-    console.log(selectedOccupied)
-
-    if (selectedOccupied && !settings) {
-      setSettingsForced(true);
-      setDraftChoice(null);
-    } else {
-      setSettingsForced(false);
-      void updateMetrics(next);
-    }
+    void updateMetrics(next);
   };
 
   const resetFilter = (kind: FilterKind) => {
@@ -231,7 +222,7 @@ function App() {
         </Notice>
       )}
 
-      {(settingsForced || (hasOccupiedSelection && !settings)) &&
+      {settingsForced &&
         <section className="settings-card" id="ads-settings">
           <p className="settings-copy">You can choose how the system should handle sites that match your country/themes but have all slots taken in the selected Ads Type</p>
           <div className="choice-list">
