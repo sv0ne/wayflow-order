@@ -7,28 +7,39 @@ type Props = {
   kind: FilterKind;
   initialValues: string[];
   initialSites: string[];
+  initialSitesNextOffset: number | null;
+  onSitesLoaded: (items: string[], nextOffset: number | null) => void;
   countries: string[];
   themes: string[];
   adTypes: AdGroup[];
   onClose: () => void;
   onApply: (values: string[]) => void;
-  onResetSites: () => void;
+  onReset: () => void;
 };
 type SitePage = { items: string[]; nextOffset: number | null };
 
 const titles: Record<FilterKind, string> = { sites: 'Sites', countries: 'Countries', themes: 'Themes', adsType: 'Ads Type' };
+const resetLabels: Record<FilterKind, string> = { sites: 'Reset to All sites', countries: 'Reset to All countries', themes: 'Reset to All themes', adsType: 'Reset Ads type' };
 
-export function FilterDialog({ kind, initialValues, initialSites, countries, themes, adTypes, onClose, onApply, onResetSites }: Props) {
+export function FilterDialog({ kind, initialValues, initialSites, initialSitesNextOffset, onSitesLoaded, countries, themes, adTypes, onClose, onApply, onReset }: Props) {
   const [selected, setSelected] = useState<string[]>(initialValues);
   const [search, setSearch] = useState('');
   const [siteItems, setSiteItems] = useState<string[]>(initialSites);
-  const [nextOffset, setNextOffset] = useState<number | null>(initialSites.length >= 20 ? 20 : null);
+  const siteItemsRef = useRef(initialSites);
+  const initialSitesRef = useRef(initialSites);
+  const initialSitesNextOffsetRef = useRef(initialSitesNextOffset);
+  const [nextOffset, setNextOffset] = useState<number | null>(initialSitesNextOffset);
   const [loadingSites, setLoadingSites] = useState(false);
   const [siteError, setSiteError] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<number | null>(null);
   const siteRequest = useRef(0);
   const hasSearchedSites = useRef(false);
+
+  useEffect(() => {
+    initialSitesRef.current = initialSites;
+    initialSitesNextOffsetRef.current = initialSitesNextOffset;
+  }, [initialSites, initialSitesNextOffset]);
 
   const loadSites = useCallback(async (query: string, offset: number, replace: boolean) => {
     const requestId = ++siteRequest.current;
@@ -37,19 +48,31 @@ export function FilterDialog({ kind, initialValues, initialSites, countries, the
     try {
       const page = await api<SitePage>(`/api/sites?search=${encodeURIComponent(query)}&offset=${offset}&limit=20`);
       if (requestId !== siteRequest.current) return;
-      setSiteItems((current) => replace ? page.items : [...current, ...page.items.filter((item) => !current.includes(item))]);
+      const currentItems = siteItemsRef.current;
+      const updatedItems = replace ? page.items : [...currentItems, ...page.items.filter((item) => !currentItems.includes(item))];
+      siteItemsRef.current = updatedItems;
+      setSiteItems(updatedItems);
       setNextOffset(page.nextOffset);
+      if (query === '') onSitesLoaded(updatedItems, page.nextOffset);
     } catch (error) {
       if (requestId === siteRequest.current) setSiteError(error instanceof Error ? error.message : 'Could not load sites.');
     } finally {
       if (requestId === siteRequest.current) setLoadingSites(false);
     }
-  }, []);
+  }, [onSitesLoaded]);
 
   useEffect(() => {
     if (kind !== 'sites') return;
     if (search === '' && !hasSearchedSites.current) return;
     siteRequest.current += 1;
+    if (search === '') {
+      hasSearchedSites.current = false;
+      siteItemsRef.current = initialSitesRef.current;
+      setSiteItems(initialSitesRef.current);
+      setNextOffset(initialSitesNextOffsetRef.current);
+      setLoadingSites(false);
+      return;
+    }
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
     searchTimer.current = window.setTimeout(() => void loadSites(search, 0, true), 300);
     return () => { if (searchTimer.current) window.clearTimeout(searchTimer.current); };
@@ -62,11 +85,14 @@ export function FilterDialog({ kind, initialValues, initialSites, countries, the
     return () => { document.removeEventListener('keydown', onKeyDown); document.body.classList.remove('dialog-open'); };
   }, [onClose]);
 
-  const toggle = (value: string) => setSelected((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  const toggleAll = (values: string[]) => {
-    const visibleSelected = values.every((value) => selected.includes(value));
-    setSelected((current) => visibleSelected ? current.filter((item) => !values.includes(item)) : [...new Set([...current, ...values])]);
+  const toggle = (value: string) => {
+    const isSelected = selected.includes(value);
+    if (kind === 'sites' && search !== '' && !isSelected && !initialSitesRef.current.includes(value)) {
+      onSitesLoaded([...initialSitesRef.current, value], initialSitesNextOffsetRef.current);
+    }
+    setSelected((current) => isSelected ? current.filter((item) => item !== value) : [...current, value]);
   };
+
   const onScroll = () => {
     const element = scrollRef.current;
     if (kind === 'sites' && element && nextOffset !== null && !loadingSites && element.scrollTop + element.clientHeight >= element.scrollHeight - 80) {
@@ -76,40 +102,27 @@ export function FilterDialog({ kind, initialValues, initialSites, countries, the
 
   let content;
   if (kind === 'sites') {
-    const remainingSites = siteItems.filter((site) => !selected.includes(site));
     content = <>
       <label className="modal-search"><input autoFocus value={search} onChange={(event) => { hasSearchedSites.current = true; setSearch(event.target.value); }} placeholder="Search"/></label>
       <div className="modal-list" ref={scrollRef} onScroll={onScroll}>
-        {selected.map((site) => <OptionRow key={`selected-${site}`} label={site} checked onChange={() => toggle(site)}/>)}
-        {selected.length > 0 && <SelectionDivider/>}
-        {remainingSites.map((site) => <OptionRow key={site} label={site} checked={false} onChange={() => toggle(site)}/>)}
+        {siteItems.map((site) => <OptionRow key={site} label={site} checked={selected.includes(site)} onChange={() => toggle(site)}/>)}
         {loadingSites && <div className="list-status"><span className="mini-spinner"/> Loading sites…</div>}
         {siteError && <div className="list-status error-text">{siteError}</div>}
-        {!loadingSites && !siteError && remainingSites.length === 0 && selected.length === 0 && <div className="list-status">No sites found.</div>}
+        {!loadingSites && !siteError && siteItems.length === 0 && <div className="list-status">No sites found.</div>}
       </div>
     </>;
   } else if (kind === 'countries' || kind === 'themes') {
     const values = kind === 'countries' ? countries : themes;
-    const selectedValues = values.filter((value) => selected.includes(value));
-    const remainingValues = values.filter((value) => !selected.includes(value));
     content = <>
-      <button className="select-all" onClick={() => toggleAll(values)}>{values.every((value) => selected.includes(value)) ? 'Clear selection' : 'Select all'}</button>
       <div className="modal-list" ref={scrollRef}>
-        {selectedValues.map((value) => <OptionRow key={`selected-${value}`} label={value} checked onChange={() => toggle(value)}/>)}
-        {selectedValues.length > 0 && <SelectionDivider/>}
-        {remainingValues.map((value) => <OptionRow key={value} label={value} checked={false} onChange={() => toggle(value)}/>)}
+        {values.map((value) => <OptionRow key={value} label={value} checked={selected.includes(value)} onChange={() => toggle(value)}/>)}
       </div>
     </>;
   } else {
-    const selectedOptions = adTypes.flatMap((group) => group.options).filter((option) => selected.includes(option.id));
     content = <>
-      <div className="modal-search search-placeholder">Search</div>
       <div className="modal-list ad-list">
-        {selectedOptions.map((option) => <OptionRow key={`selected-${option.id}`} label={option.name} checked onChange={() => toggle(option.id)}/>)}
-        {selectedOptions.length > 0 && <SelectionDivider/>}
         {adTypes.map((group) => {
-          const remaining = group.options.filter((option) => !selected.includes(option.id));
-          return remaining.length > 0 && <div className="ad-group" key={group.category || 'standard'}>{group.category && <h3>{group.category}</h3>}{remaining.map((option) => <OptionRow key={option.id} label={option.name} checked={false} onChange={() => toggle(option.id)}/>)}</div>;
+          return <div className="ad-group" key={group.category || 'standard'}>{group.category && <h3>{group.category}</h3>}{group.options.map((option) => <OptionRow key={option.id} label={option.name} checked={selected.includes(option.id)} onChange={() => toggle(option.id)}/>)}</div>;
         })}
       </div>
     </>;
@@ -120,7 +133,7 @@ export function FilterDialog({ kind, initialValues, initialSites, countries, the
       <div className="modal-heading"><h2 id="dialog-title">{titles[kind]}</h2><button className="icon-button close-button" onClick={onClose} aria-label="Close dialog"><img src="/assets/close-filter.svg" alt=""/></button></div>
       {content}
       <footer className="modal-footer">
-        {kind === 'sites' ? <button className="button filter-reset" onClick={onResetSites}>Reset to All sites</button> : <button className="button filter-reset" onClick={() => setSelected([])}>Clear</button>}
+        <button className="button filter-reset" onClick={onReset}>{resetLabels[kind]}</button>
         <button className="button button-primary" onClick={() => onApply(selected)}>Apply</button>
       </footer>
     </section>
@@ -131,6 +144,3 @@ function OptionRow({ label, checked, onChange }: { label: import('react').ReactN
   return <label className="option-row"><input type="checkbox" checked={checked} onChange={onChange}/><span className="option-checkbox"><img src={checked ? '/assets/checkbox-checked.svg' : '/assets/checkbox-unchecked.svg'} alt=""/></span><span className="option-label">{label}</span></label>;
 }
 
-function SelectionDivider() {
-  return <div className="selection-divider" role="separator"/>;
-}

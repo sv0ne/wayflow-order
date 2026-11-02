@@ -25,14 +25,28 @@ export const adTypes = [
     { id: 'flat-position-7-10', name: 'Position 7-10', occupied: false },
     { id: 'flat-position-11-20', name: 'Position 11-20', occupied: false },
   ] },
-  { category: 'Listing', options: [{ id: 'listing-30', name: 'New site 30', occupied: false }, { id: 'listing-365', name: 'New site 365', occupied: false }] },
-  { category: 'Banners', options: [{ id: 'banner-fixed-bottom', name: 'Fixed bottom panel', occupied: true }, { id: 'banner-play-money', name: 'Play for money buttons', occupied: false }] },
+  { category: 'Listing', options: [
+    { id: 'listing-30', name: 'New site 30', occupied: false },
+    { id: 'listing-365', name: 'New site 365', occupied: false }
+  ] },
+  { category: 'Banners', options: [
+    { id: 'banner-fixed-bottom', name: 'Fixed bottom panel', occupied: true },
+    { id: 'banner-play-money', name: 'Play for money buttons', occupied: false }
+  ] },
 ];
 
-export const topPicks = [
-  { domain: 'ms03.mansioncasino-uk.com', clicks: 145100 },
-  { domain: 'spinkocasino-cy.com', clicks: 135000 },
-  { domain: 'gb.redtoucancasino-uk.com', clicks: 125200 },
-  { domain: 'mafia-pl.com.pl', clicks: 108100 },
-  { domain: 'casino.com', clicks: 95000 },
+const rankedSites = [
+  'ms03.mansioncasino-uk.com', 'spinkocasino-cy.com', 'gb.redtoucancasino-uk.com',
+  'mafia-pl.com.pl', 'casino.com', ...sites.filter((site) => ![
+    'ms03.mansioncasino-uk.com', 'spinkocasino-cy.com', 'gb.redtoucancasino-uk.com',
+    'mafia-pl.com.pl', 'casino.com',
+  ].includes(site)),
 ];
+const initialClicks = [145100, 135000, 125200, 108100, 95000];
+const themesBySite = ['Big Bass Splash', 'Aviator', 'Big Bass Splash', 'Pin-UP', 'Book of Dead'];
+
+export const topPicks = rankedSites.map((domain, index) => ({
+  domain,
+  theme: themesBySite[index] ?? themes[index % themes.length],
+  clicks: initialClicks[index] ?? Math.max(12000, 90000 - (index - 4) * 1800),
+}));

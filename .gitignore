@@ -1,5 +1,4 @@
 node_modules/
-dist/
 .idea/
 
 *.tsbuildinfo
@@ -7,3 +6,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+NOTES.md
+TASK.md

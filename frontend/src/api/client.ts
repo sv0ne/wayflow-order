@@ -1,4 +1,9 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
+// Проверяем: если есть глобальный конфиг, берем API из него.
+// Иначе берем переменную окружения от Vite (для Vercel и локального npm run dev).
+const apiBaseUrl =
+  (typeof window !== 'undefined' && (window as any).APP_CONFIG?.API_BASE_URL)
+  ?? import.meta.env.VITE_API_BASE_URL
+  ?? '';
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
