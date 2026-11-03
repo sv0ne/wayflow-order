@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
+import checkboxCheckedIcon from "./../assets/icons/checkbox-checked.svg";
+import checkboxUncheckedIcon from "./../assets/icons/checkbox-unchecked.svg";
+import closeIcon from "./../assets/icons/close-filter.svg";
 
 export type FilterKind = 'sites' | 'countries' | 'themes' | 'adsType';
 type AdGroup = { category: string; options: { id: string; name: string }[] };
@@ -130,7 +133,7 @@ export function FilterDialog({ kind, initialValues, initialSites, initialSitesNe
 
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="filter-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-      <div className="modal-heading"><h2 id="dialog-title">{titles[kind]}</h2><button className="icon-button close-button" onClick={onClose} aria-label="Close dialog"><img src="/assets/close-filter.svg" alt=""/></button></div>
+      <div className="modal-heading"><h2 id="dialog-title">{titles[kind]}</h2><button className="icon-button close-button" onClick={onClose} aria-label="Close dialog"><img src={closeIcon} alt=""/></button></div>
       {content}
       <footer className="modal-footer">
         <button className="button filter-reset" onClick={onReset}>{resetLabels[kind]}</button>
@@ -141,6 +144,6 @@ export function FilterDialog({ kind, initialValues, initialSites, initialSitesNe
 }
 
 function OptionRow({ label, checked, onChange }: { label: import('react').ReactNode; checked: boolean; onChange: () => void }) {
-  return <label className="option-row"><input type="checkbox" checked={checked} onChange={onChange}/><span className="option-checkbox"><img src={checked ? '/assets/checkbox-checked.svg' : '/assets/checkbox-unchecked.svg'} alt=""/></span><span className="option-label">{label}</span></label>;
+  return <label className="option-row"><input type="checkbox" checked={checked} onChange={onChange}/><span className="option-checkbox"><img src={checked ? checkboxCheckedIcon : checkboxUncheckedIcon} alt=""/></span><span className="option-label">{label}</span></label>;
 }
 

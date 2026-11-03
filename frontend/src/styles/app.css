@@ -282,7 +282,6 @@
     place-items: center;
     border: 1px solid rgba(255, 255, 255, .45);
     border-radius: 50%;
-    transition: border .15s, background .15s;
 }
 
 .choice-row.selected .custom-radio {
@@ -298,9 +297,9 @@
 .auto-choice {
     width: fit-content;
     justify-content: center;
-    margin: 4px auto 0;
+    margin: 16px auto 0;
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .custom-checkbox {
@@ -369,12 +368,12 @@
 
 .button-quiet {
     border-color: var(--line-strong);
-    background: transparent;
+    background: rgba(255, 255, 255, 0.05);
     color: white;
 }
 
 .button-quiet:hover {
-    background: rgba(255, 255, 255, .08);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .estimate-section {
@@ -606,10 +605,11 @@
     height: 24px;
 }
 
-.error-state h1 {
+.error-state-title {
     margin: 0;
-    color: white;
+    color: #ef4444;
     font-size: 26px;
+    font-weight: 600;
 }
 
 .error-state p {
@@ -756,10 +756,6 @@
     transition: background .12s ease;
 }
 
-.option-row:hover {
-    background: rgba(255, 255, 255, .06);
-}
-
 .option-checkbox {
     width: 32px;
     height: 32px;
@@ -896,7 +892,7 @@
 @keyframes dialog-in {
     from {
         opacity: 0;
-        transform: translateY(8px) scale(.985);
+        transform: translateY(8px) scale(1);
     }
     to {
         opacity: 1;
@@ -1119,6 +1115,12 @@
 
     .modal-footer {
         padding: 14px 18px 18px;
+    }
+}
+
+@media (min-width: 600px) {
+    .option-row:hover {
+        background: rgba(255, 255, 255, .06);
     }
 }
 

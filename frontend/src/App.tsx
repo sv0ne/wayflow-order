@@ -23,6 +23,7 @@ type MetricFilters = { sites: string[]; countries: string[]; themes: string[]; a
 type AdsChoice = 'asc' | 'desc' | 'match';
 
 const settingKey = 'wayflow.adsTypeChoice';
+const autoApplyKey = 'wayflow.adsTypeChoiceAutoApply';
 const sitesNoticeKey = 'wayflow.sitesOnlyNoticeSeen';
 const alternativesNoticeKey = 'wayflow.alternativesNoticeSeen';
 
@@ -78,6 +79,8 @@ function App() {
   const [settings, setSettings] = useState<AdsChoice | null>(() => readAdsChoice());
   const [draftChoice, setDraftChoice] = useState<AdsChoice | null>(() => readAdsChoice());
   const [settingsForced, setSettingsForced] = useState(false);
+  const [settingsRequired, setSettingsRequired] = useState(false);
+  const [autoApplyChoice, setAutoApplyChoice] = useState(() => localStorage.getItem(autoApplyKey) !== '0');
   const [settingsApplied, setSettingsApplied] = useState(false);
   const [sitesNotice, setSitesNotice] = useState(() => !localStorage.getItem(sitesNoticeKey));
   const [alternativesNotice, setAlternativesNotice] = useState(() => !localStorage.getItem(alternativesNoticeKey));
@@ -105,15 +108,17 @@ function App() {
     setUpdating(true);
     setError('');
     try {
-      const result = await api<MetricsResponse>('/api/metrics', { method: 'POST', body: JSON.stringify({ ...next, orderId, adsTypeChoice: adsTypeChoice ?? settings }) });
+      const result = await api<MetricsResponse>('/api/metrics', { method: 'POST', body: JSON.stringify({ ...next, orderId, adsTypeChoice: adsTypeChoice === undefined ? settings : adsTypeChoice }) });
       if (requestId !== requestCounter.current) return;
       if (result.needsAdsTypeChoice) {
         setSettingsForced(true);
+        setSettingsRequired(true);
         setDraftChoice(null);
         setAlternatives([]);
         return;
       }
       setSettingsForced(false);
+      setSettingsRequired(false);
       setStats(result.stats);
       setTopPicks(result.topPicks);
       setAlternatives(result.alternatives ?? []);
@@ -152,9 +157,15 @@ function App() {
 
   const saveAdsSettings = async () => {
     if (!draftChoice) return;
-    localStorage.setItem(settingKey, draftChoice);
-    setSettings(draftChoice);
+    if (autoApplyChoice) {
+      localStorage.setItem(settingKey, draftChoice);
+      setSettings(draftChoice);
+    } else {
+      localStorage.removeItem(settingKey);
+      setSettings(null);
+    }
     setSettingsForced(false);
+    setSettingsRequired(false);
     setSettingsApplied(true);
     window.setTimeout(() => setSettingsApplied(false), 520);
     void updateMetrics(filters, draftChoice);
@@ -172,6 +183,7 @@ function App() {
 
   const showAdsSettings = () => {
     setSettingsForced(true);
+    setSettingsRequired(false);
     window.requestAnimationFrame(() => document.getElementById('ads-settings')?.scrollIntoView({
       behavior: 'smooth',
       block: 'center'
@@ -181,7 +193,7 @@ function App() {
   const sitesOnly = filters.sites.length > 0;
 
   if (loading) return <main className="page-shell"><div className="loading-state"><img className="brand" src="/assets/workingdrops-logo.svg" alt="Workingdrops"/><span className="spinner"/><span>Preparing your order…</span></div></main>;
-  if (error && !order) return <main className="page-shell"><div className="error-state"><img className="brand" src="/assets/workingdrops-logo.svg" alt="Workingdrops"/><h1>We couldn’t load this order</h1><p>{error}</p><button className="button button-primary" onClick={() => window.location.reload()}>Try again</button></div></main>;
+  if (error && !order) return <main className="page-shell"><div className="error-state"><img className="brand" src="/assets/workingdrops-logo.svg" alt="Workingdrops"/><h1 className="error-state-title">We couldn’t load this order</h1><p>{error}</p><button className="button button-primary" onClick={() => window.location.reload()}>Try again</button></div></main>;
   if (!order || !stats) return null;
 
   return <main className="page-shell v3">
@@ -207,6 +219,7 @@ function App() {
             </button>
             {kind === 'adsType' &&
               <button className={`info-trigger ${settingsApplied ? 'is-applied' : ''}`} aria-label="Ads type settings information" onClick={() => {
+                setSettingsRequired(false);
                 setSettingsForced(true);
                 window.requestAnimationFrame(() => document.getElementById('ads-settings')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
               }}><img src={helpIcon} alt="helpIcon"/></button>
@@ -235,7 +248,23 @@ function App() {
               </label>
             )}
           </div>
-          <div className="settings-footer"><button className="button button-primary" disabled={!draftChoice} onClick={() => void saveAdsSettings()}>Apply</button></div>
+          <div className="settings-footer">
+            {!settingsRequired && <button className="button button-quiet" onClick={() => setSettingsForced(false)}>Cancel</button>}
+            <button className="button button-primary" disabled={!draftChoice} onClick={() => void saveAdsSettings()}>Apply</button>
+          </div>
+          <label className="auto-choice">
+            <input type="checkbox" checked={autoApplyChoice} onChange={(event) => {
+              const checked = event.target.checked;
+              setAutoApplyChoice(checked);
+              if (checked) localStorage.setItem(autoApplyKey, '1');
+              else {
+                localStorage.setItem(autoApplyKey, '0');
+                localStorage.removeItem(settingKey);
+                setSettings(null);
+              }
+            }}/>
+            <span className="custom-checkbox"/><span>Always apply this choice automatically</span>
+          </label>
         </section>
       }
 

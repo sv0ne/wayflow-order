@@ -18,6 +18,7 @@
 }
 
 * { box-sizing: border-box; }
+html { scrollbar-gutter: stable; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: #0f0f10; }
 body.dialog-open { overflow: hidden; }
 button, input { font: inherit; }
