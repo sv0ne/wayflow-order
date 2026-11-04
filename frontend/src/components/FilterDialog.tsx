@@ -13,6 +13,7 @@ type Props = {
   initialSitesNextOffset: number | null;
   onSitesLoaded: (items: string[], nextOffset: number | null) => void;
   countries: string[];
+  selectedCountries: string[];
   themes: string[];
   adTypes: AdGroup[];
   onClose: () => void;
@@ -24,7 +25,7 @@ type SitePage = { items: string[]; nextOffset: number | null };
 const titles: Record<FilterKind, string> = { sites: 'Sites', countries: 'Countries', themes: 'Themes', adsType: 'Ads Type' };
 const resetLabels: Record<FilterKind, string> = { sites: 'Reset to All sites', countries: 'Reset to All countries', themes: 'Reset to All themes', adsType: 'Reset Ads type' };
 
-export function FilterDialog({ kind, initialValues, initialSites, initialSitesNextOffset, onSitesLoaded, countries, themes, adTypes, onClose, onApply, onReset }: Props) {
+export function FilterDialog({ kind, initialValues, initialSites, initialSitesNextOffset, onSitesLoaded, countries, selectedCountries, themes, adTypes, onClose, onApply, onReset }: Props) {
   const [selected, setSelected] = useState<string[]>(initialValues);
   const [search, setSearch] = useState('');
   const [siteItems, setSiteItems] = useState<string[]>(initialSites);
@@ -49,7 +50,9 @@ export function FilterDialog({ kind, initialValues, initialSites, initialSitesNe
     setLoadingSites(true);
     setSiteError('');
     try {
-      const page = await api<SitePage>(`/api/sites?search=${encodeURIComponent(query)}&offset=${offset}&limit=20`);
+      const params = new URLSearchParams({ search: query, offset: String(offset), limit: '20' });
+      selectedCountries.forEach((country) => params.append('country', country));
+      const page = await api<SitePage>(`/api/sites?${params}`);
       if (requestId !== siteRequest.current) return;
       const currentItems = siteItemsRef.current;
       const updatedItems = replace ? page.items : [...currentItems, ...page.items.filter((item) => !currentItems.includes(item))];
@@ -62,10 +65,14 @@ export function FilterDialog({ kind, initialValues, initialSites, initialSitesNe
     } finally {
       if (requestId === siteRequest.current) setLoadingSites(false);
     }
-  }, [onSitesLoaded]);
+  }, [onSitesLoaded, selectedCountries]);
 
   useEffect(() => {
     if (kind !== 'sites') return;
+    if (siteItemsRef.current.length === 0 && nextOffset === 0 && search === '') {
+      void loadSites('', 0, true);
+      return;
+    }
     if (search === '' && !hasSearchedSites.current) return;
     siteRequest.current += 1;
     if (search === '') {
@@ -79,7 +86,7 @@ export function FilterDialog({ kind, initialValues, initialSites, initialSitesNe
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
     searchTimer.current = window.setTimeout(() => void loadSites(search, 0, true), 300);
     return () => { if (searchTimer.current) window.clearTimeout(searchTimer.current); };
-  }, [kind, loadSites, search]);
+  }, [kind, loadSites, nextOffset, search]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };

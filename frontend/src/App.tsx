@@ -10,6 +10,7 @@ type AdOption = { id: string; name: string };
 type AdGroup = { category: string; options: AdOption[] };
 type Order = {
   id: string;
+  version: number;
   expiresAt: string;
   stats: { tds: number; gsc: number; price: number };
   topPicks: Pick[];
@@ -18,7 +19,8 @@ type Order = {
 type Stats = Order['stats'];
 type Pick = { domain: string; theme: string; clicks: number };
 type Alternative = { id: string; site: number; country: string | null; theme: string | null; adType: string };
-type MetricsResponse = { stats: Stats; topPicks: Pick[]; alternatives: Alternative[]; needsAdsTypeChoice?: boolean };
+type MetricsResponse = { stats: Stats; topPicks: Pick[]; alternatives: Alternative[]; version?: number; needsAdsTypeChoice?: boolean };
+type AlternativeDeleteResponse = { stats: Stats; topPicks: Pick[]; alternatives: Alternative[]; version: number };
 type MetricFilters = { sites: string[]; countries: string[]; themes: string[]; adTypes: string[] };
 type AdsChoice = 'asc' | 'desc' | 'match';
 
@@ -70,6 +72,8 @@ function App() {
   const [loadedSites, setLoadedSites] = useState<string[]>([]);
   const [sitesNextOffset, setSitesNextOffset] = useState<number | null>(null);
   const [alternatives, setAlternatives] = useState<Alternative[]>([]);
+  const [orderVersion, setOrderVersion] = useState(0);
+  const [deletingAlternative, setDeletingAlternative] = useState<string | null>(null);
   const [filters, setFilters] = useState<MetricFilters>({ sites: [], countries: [], themes: [], adTypes: [] });
   const [activeDialog, setActiveDialog] = useState<FilterKind | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +97,7 @@ function App() {
       .then((data) => {
         if (cancelled) return;
         setOrder(data);
+        setOrderVersion(data.version);
         setLoadedSites(data.filters.sites);
         setSitesNextOffset(data.filters.sites.length >= 20 ? 20 : null);
         setStats(data.stats);
@@ -110,6 +115,7 @@ function App() {
     try {
       const result = await api<MetricsResponse>('/api/metrics', { method: 'POST', body: JSON.stringify({ ...next, orderId, adsTypeChoice: adsTypeChoice === undefined ? settings : adsTypeChoice }) });
       if (requestId !== requestCounter.current) return;
+      if (typeof result.version === 'number') setOrderVersion(result.version);
       if (result.needsAdsTypeChoice) {
         setSettingsForced(true);
         setSettingsRequired(true);
@@ -129,15 +135,47 @@ function App() {
     }
   }, [orderId, settings]);
 
+  const deleteAlternative = async (alternativeId: string) => {
+    setDeletingAlternative(alternativeId);
+    setError('');
+    try {
+      const result = await api<AlternativeDeleteResponse>(`/api/alternatives/${encodeURIComponent(alternativeId)}?orderId=${encodeURIComponent(orderId)}&version=${orderVersion}`, {
+        method: 'DELETE',
+      });
+      setStats(result.stats);
+      setTopPicks(result.topPicks);
+      setAlternatives(result.alternatives);
+      setOrderVersion(result.version);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not remove this alternative.');
+    } finally {
+      setDeletingAlternative(null);
+    }
+  };
+
   const applyFilter = (kind: FilterKind, values: string[]) => {
     const key = kind === 'adsType' ? 'adTypes' : kind;
     const next = { ...filters, [key]: values };
+    if (kind === 'countries') {
+      next.themes = [];
+    }
     if (kind === 'sites' && values.length > 0) {
       next.countries = [];
       next.themes = [];
     }
     setFilters(next);
     setActiveDialog(null);
+    if (kind === 'countries') {
+      const query = new URLSearchParams();
+      values.forEach((country) => query.append('country', country));
+      void api<{ themes: string[]; sites: string[]; nextOffset: number | null }>(`/api/filter-options?${query}`)
+        .then((options) => {
+          setOrder((current) => current ? { ...current, filters: { ...current.filters, themes: options.themes } } : current);
+          setLoadedSites(options.sites);
+          setSitesNextOffset(options.nextOffset);
+        })
+        .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Could not update filter options.'));
+    }
     void updateMetrics(next);
   };
 
@@ -147,6 +185,15 @@ function App() {
     setFilters(next);
     setActiveDialog(null);
     setSettingsForced(false);
+    if (kind === 'countries' || kind === 'sites') {
+      void api<{ themes: string[]; sites: string[]; nextOffset: number | null }>('/api/filter-options')
+        .then((options) => {
+          setOrder((current) => current ? { ...current, filters: { ...current.filters, themes: options.themes } } : current);
+          setLoadedSites(options.sites);
+          setSitesNextOffset(options.nextOffset);
+        })
+        .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Could not update filter options.'));
+    }
     void updateMetrics(next);
   };
 
@@ -284,7 +331,7 @@ function App() {
               <p><span className="alternative-desktop-value">{item.theme ?? 'All'}</span><span className="alternative-mobile-value">{item.theme ?? 'All themes'}</span></p>
               <div>
                 <p>{item.adType}</p>
-                <button aria-label={`Remove replacement for ${item.site}`} onClick={() => setAlternatives((current) => current.filter((row) => row.id !== item.id))}>
+                <button aria-label={`Remove replacement for ${item.site}`} disabled={deletingAlternative !== null || updating} onClick={() => void deleteAlternative(item.id)}>
                   <img src={deleteIcon} alt="deleteIcon" />
                 </button>
               </div>
@@ -318,6 +365,7 @@ function App() {
       initialSitesNextOffset={sitesNextOffset}
       onSitesLoaded={cacheLoadedSites}
       countries={order.filters.countries}
+      selectedCountries={filters.countries}
       themes={order.filters.themes}
       adTypes={order.filters.adTypes}
       onClose={() => setActiveDialog(null)}
